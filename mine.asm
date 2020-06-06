@@ -1,4 +1,16 @@
+format MZ			;Specify the 
 org 100h                        ;specify .COM file
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;Constants
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+COLUMNS = 8
+LINES   = 8
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;Code
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 start:
         ; mov     al,13h          ;AX=0000 at program start
@@ -32,9 +44,13 @@ mainloop:
 		mov     dword [lastkeypressed], 0h	;Reset the current key as it is not one we are checking
         dec     al						;if ESC, AL now 0
         jnz     mainloop        		;fall through if 0, jump otherwise
+		
+exit:
         mov     al,03           		;AX=0000 due to mainloop exit condition
         int     10h             		;Switch back to text mode as a convenience
-        ret                     		;.COM files can exit with RET
+		mov     ah,4Ch					;Function to exit, now we are an EXE, do it correctly
+		mov     al,00					;Exit code as 0, everything went well
+		int     21h
 
 upkey:
 		cmp     ax, [lastkeypressed]
@@ -90,6 +106,8 @@ lalt:
         int     21h
         jmp     mainloop
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;Data segment
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 lastkeypressed:		db		0
