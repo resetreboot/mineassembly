@@ -10,6 +10,8 @@ stack  $3000
 
 COLUMNS = 8
 LINES   = 8
+FIELDX  = 02h
+FIELDY  = 02h
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;Code
@@ -25,12 +27,65 @@ start:
         pop     es              ;ES now points to mode 13h screen segment
 		mov     ax, DataSeg     
 		mov     ds, ax          ;DS now points to our data segment
-		; Test draw a box
-		mov     cx, 00h         ;Y is 0
-		mov     ax, 00h         ;X is 0
-		mov     bx, covercell
-		call    drawbox         ;Draw a box with this data
-		jmp     mainloop
+		call    createminefield ;Initialize the map with mines
+		call    drawfield       ;Draw the map
+		jmp     mainloop		;Main event and game loop
+
+
+; Draw the field
+drawfield:
+		mov     cx, 00h
+		mov     ax, 00h
+		call    getbmp
+        ; mov     bx, covercell
+drawfieldloop:
+		push    cx
+		push    ax
+		add     cx, FIELDY          ; Make sure we get the field displaced correctly
+		add     ax, FIELDX
+		call    drawbox
+		pop     ax
+		pop     cx
+		inc     cx
+		call    getbmp
+		cmp     cx, 0Ah
+		jne     drawfieldloop
+		mov     cx, 0'h
+		inc     ax
+		call    getbmp
+		cmp     ax, 0Ah
+		jne     drawfieldloop
+		ret    
+getbmp:
+		mov     bx, map	    	   ; Store the base of the map in BX
+		push	ax				   ; Don't mangle AX
+		mov     ax, COLUMNS        ; How many columns an AX
+		mul     cx                 ; So we now multiply CX (Y coord) by COLUMNS
+		add     bx, cx             ; Add it to the pointer
+		pop     ax				   ; Recover AX (X coord)
+		add     bx, ax			   ; Add the X coord to BX, now we can read
+		cmp     bx, 0009h		   ; There's a mine
+		jne     nomine	
+		mov     bx, minebmp      ; Point to the mine bitmap
+		ret
+nomine:	
+		mov     bx, covercell		;  Point to the covered cell
+		ret     
+
+;Random subroutines here
+initseed:
+		mov     ah, 02Ch		;Select Get System Time function
+		int     021h			;Call DOS 
+		add     cx, dx          ;Add the seconds and milliseconds to add more randomness
+		mov     word [seed], cx ;In CX we have our new seed
+		ret
+
+random:
+		mov		ax, 25173		;LCG multiplier
+		mul     word [seed]		;DX:AX  = LCG multiplier * seed
+		add     ax, 13849       ;Add LCG increment value
+		mov     word [seed], ax ;Update seed, AX has the random number now
+		ret 
 
 ;This is thought to pick up from the registers the address of what we need to draw
 ;Draw it, and return. The params are:
@@ -40,14 +95,12 @@ start:
 drawbox:
 		push    ax              ;Save the X value for later
 		mov     ax, cx          ;Prepare for multiplications
-		mov     cl, 8
-		mul     cl      		;This routine maintains the 8x8 positions
-		mov     cx, 320         ;
-		mul     cl      	    ;And now we count whole lines for the address
+		mov     dx, 0A00h
+		mul     dx
 		mov     cx, ax          ;Retrieve the line into CX
         pop     ax              ;Retrieve the X value into AX register
-		mov     dl, 8
-		mul     dl          	;We multiply the X value too for the 8x8
+		mov     dx, 08h
+		mul     dx          	;We multiply the X value too for the 8x8
 		add     cx, ax          ;Now we've put in AX the pointer value 
 		mov     si, cx          ;Set SI to the correct address we'll draw
 		mov     cx, 00
@@ -73,7 +126,44 @@ jumplinedraw:
 		mov     dx, 00h
 		add     si, 313			;Jump a whole line
 		jmp     continuecomp    ;Continue the routine
+
+;This function populates the minefield with mines
+createminefield:
+		call    initseed		;Make sure we have a good seed 
+		mov     dx, 00h			;DX will be our pointer
+		mov     bx, [map]		;BX our base pointer
+cmfloop:
+		push    dx				;Save our counters before generating random number
+		push    bx
+		call    random          ;This leaves a random num in AX
+		pop     bx
+		pop     dx
+		cmp     al, 0F0h		;Compare if it's greater than 240
+		jg		putmine
+continuecreateminefield:
+        inc     bx
+		inc     dx
+		cmp     dx, COLUMNS * LINES  ; Check we have done the whole map
+		jne     cmfloop
+		cmp     byte [minecount], 10	; Check we've put all mines!
+		jne     createminefield
+finishcreateminefield:
+		ret								; All is ok
+
+putmine:
+		cmp     byte [minecount], 10
+		je      finishcreateminefield
+		cmp     word [bx], 00009h		;Check memory for placed mine 
+		je      continuecreateminefield
+		mov     word [bx], 00009h
+		inc     byte [minecount]
+		jmp     continuecreateminefield
 		
+;This routine checks the map and puts numbers down given the 
+;amount of 
+;calculateminenumbers:
+;		mov		bx, [map]
+;		mov     dx, 00h
 
 mainloop:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -169,6 +259,8 @@ segment DataSeg
 use16
 
 lastkeypressed:		db		0
+seed:				dw      0
+minecount:          db      0
 ;Game map. First 8 bytes are for the cell status
 ;the last 8 bytes are for the cell contents.
 ;
@@ -183,4 +275,31 @@ covercell:			db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh
                     db      0fh, 17h, 17h, 17h, 17h, 17h, 17h, 14h 
                     db      0fh, 17h, 17h, 17h, 17h, 17h, 17h, 14h 
                     db      0fh, 17h, 17h, 17h, 17h, 17h, 17h, 14h 
+                    db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h 
+
+emptycell:			db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h 
+                    db      14h, 17h, 17h, 17h, 17h, 17h, 17h, 0fh 
+                    db      14h, 17h, 17h, 17h, 17h, 17h, 17h, 0fh 
+                    db      14h, 17h, 17h, 17h, 17h, 17h, 17h, 0fh 
+                    db      14h, 17h, 17h, 17h, 17h, 17h, 17h, 0fh 
+                    db      14h, 17h, 17h, 17h, 17h, 17h, 17h, 0fh 
+                    db      14h, 17h, 17h, 17h, 17h, 17h, 17h, 0fh 
+                    db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
+
+minebmp:			db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h 
+                    db      14h, 10h, 17h, 10h, 17h, 17h, 10h, 0fh 
+                    db      14h, 17h, 10h, 10h, 10h, 10h, 17h, 0fh 
+                    db      14h, 17h, 10h, 10h, 0fh, 10h, 10h, 0fh 
+                    db      14h, 10h, 10h, 10h, 10h, 10h, 17h, 0fh 
+                    db      14h, 17h, 10h, 10h, 10h, 10h, 17h, 0fh 
+                    db      14h, 10h, 17h, 17h, 10h, 17h, 10h, 0fh 
+                    db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
+
+flagbmp:			db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
+                    db      0fh, 17h, 17h, 04h, 10h, 17h, 17h, 14h 
+                    db      0fh, 17h, 04h, 04h, 10h, 17h, 17h, 14h 
+                    db      0fh, 04h, 04h, 04h, 10h, 17h, 17h, 14h 
+                    db      0fh, 17h, 17h, 17h, 10h, 17h, 17h, 14h 
+                    db      0fh, 17h, 17h, 17h, 10h, 17h, 17h, 14h 
+                    db      0fh, 17h, 10h, 10h, 10h, 10h, 10h, 14h 
                     db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h 
