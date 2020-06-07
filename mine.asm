@@ -10,8 +10,8 @@ stack  $3000
 
 COLUMNS = 8
 LINES   = 8
-FIELDX  = 02h
-FIELDY  = 02h
+FIELDX  = 16
+FIELDY  = 4
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;Code
@@ -36,37 +36,34 @@ start:
 drawfield:
 		mov     cx, 00h
 		mov     ax, 00h
-		call    getbmp
-        ; mov     bx, covercell
 drawfieldloop:
 		push    cx
 		push    ax
+		call    getbmp
 		add     cx, FIELDY          ; Make sure we get the field displaced correctly
 		add     ax, FIELDX
 		call    drawbox
 		pop     ax
 		pop     cx
 		inc     cx
-		call    getbmp
-		cmp     cx, 0Ah
+		cmp     cx, COLUMNS
 		jne     drawfieldloop
-		mov     cx, 0'h
+		mov     cx, 0h
 		inc     ax
-		call    getbmp
-		cmp     ax, 0Ah
+		cmp     ax, LINES
 		jne     drawfieldloop
 		ret    
 getbmp:
-		mov     bx, map	    	   ; Store the base of the map in BX
-		push	ax				   ; Don't mangle AX
-		mov     ax, COLUMNS        ; How many columns an AX
-		mul     cx                 ; So we now multiply CX (Y coord) by COLUMNS
-		add     bx, cx             ; Add it to the pointer
-		pop     ax				   ; Recover AX (X coord)
-		add     bx, ax			   ; Add the X coord to BX, now we can read
-		cmp     bx, 0009h		   ; There's a mine
+		mov     bx, map					   ; Store the base of the map in BX
+		push	ax				   		   ; Don't mangle AX
+		mov     ax, COLUMNS        		   ; How many columns in AX
+		mul     cx                 		   ; So we now multiply CX (Y coord) by COLUMNS
+		add     bx, ax             		   ; Add it to the pointer
+		pop     ax				   		   ; Recover AX (X coord)
+		add     bx, ax			   		   ; Add the X coord to BX, now we can read
+		cmp     word [ds:bx], 0009h		   ; There's a mine
 		jne     nomine	
-		mov     bx, minebmp      ; Point to the mine bitmap
+		mov     bx, minebmp                ; Point to the mine bitmap
 		ret
 nomine:	
 		mov     bx, covercell		;  Point to the covered cell
@@ -81,10 +78,10 @@ initseed:
 		ret
 
 random:
-		mov		ax, 25173		;LCG multiplier
-		mul     word [seed]		;DX:AX  = LCG multiplier * seed
-		add     ax, 13849       ;Add LCG increment value
-		mov     word [seed], ax ;Update seed, AX has the random number now
+		mov		ax, 25173		     ;LCG multiplier
+		mul     word [seed]		     ;DX:AX  = LCG multiplier * seed
+		add     ax, 13849            ;Add LCG increment value
+		mov     word [seed], ax      ;Update seed, AX has the random number now
 		ret 
 
 ;This is thought to pick up from the registers the address of what we need to draw
@@ -106,7 +103,6 @@ drawbox:
 		mov     cx, 00
 		mov     ax, 00
 		mov     dx, 00
-
 drawloop:
 		mov     al, byte [ds:bx]		;Current address in BX
 		mov     byte [es:si], al        ;Put the pixel into RAM
@@ -116,12 +112,10 @@ drawloop:
 		cmp     dx, 08h           ;Sort of modulo
 		je      jumplinedraw    ;Time to increment SI in a more complex way
 		inc     si
-
 continuecomp:
 		cmp     cx, 040h        ;Compare CX to hex 64 (8x8)
 		jne     drawloop        ;Continue
 		ret                     ;Return
-
 jumplinedraw:
 		mov     dx, 00h
 		add     si, 313			;Jump a whole line
@@ -131,32 +125,31 @@ jumplinedraw:
 createminefield:
 		call    initseed		;Make sure we have a good seed 
 		mov     dx, 00h			;DX will be our pointer
-		mov     bx, [map]		;BX our base pointer
+		mov     bx, map	    	;BX our base pointer
 cmfloop:
 		push    dx				;Save our counters before generating random number
 		push    bx
 		call    random          ;This leaves a random num in AX
-		pop     bx
+		pop     bx              ;Recover our counters
 		pop     dx
-		cmp     al, 0F0h		;Compare if it's greater than 240
-		jg		putmine
+		cmp     al, 0FEh		;Compare if it's greater than 240
+		jg		putmine			;Put a mine here
 continuecreateminefield:
-        inc     bx
+        add     bx, 02h
 		inc     dx
 		cmp     dx, COLUMNS * LINES  ; Check we have done the whole map
-		jne     cmfloop
+		jl      cmfloop
 		cmp     byte [minecount], 10	; Check we've put all mines!
-		jne     createminefield
+		jl      createminefield
 finishcreateminefield:
 		ret								; All is ok
-
 putmine:
 		cmp     byte [minecount], 10
-		je      finishcreateminefield
-		cmp     word [bx], 00009h		;Check memory for placed mine 
+		jge     finishcreateminefield
+		cmp     word [ds:bx], 00009h		;Check memory for placed mine 
 		je      continuecreateminefield
-		mov     word [bx], 00009h
 		inc     byte [minecount]
+		mov     word [ds:bx], 00009h		;Place mine
 		jmp     continuecreateminefield
 		
 ;This routine checks the map and puts numbers down given the 
@@ -266,7 +259,7 @@ minecount:          db      0
 ;
 ;Cell status: 0 covered, 1 uncovered, 2 flagged
 ;Cell content: 0 empty, 1-8 number, 9 mine
-map:				dw		COLUMNS * LINES dup ?
+map:				dw		COLUMNS * LINES dup 00h
 
 covercell:			db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
                     db      0fh, 17h, 17h, 17h, 17h, 17h, 17h, 14h 
