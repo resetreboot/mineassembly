@@ -28,6 +28,7 @@ start:
 		mov     ax, DataSeg     
 		mov     ds, ax          ;DS now points to our data segment
 		call    createminefield ;Initialize the map with mines
+		call    calculateminenumbers
 		call    drawfield       ;Draw the map
 		jmp     mainloop		;Main event and game loop
 
@@ -54,19 +55,66 @@ drawfieldloop:
 		jne     drawfieldloop
 		ret    
 getbmp:
+		push    cx                         ; Store the values before scr$%&ing them
+		push    ax
 		mov     bx, map					   ; Store the base of the map in BX
-		push	ax				   		   ; Don't mangle AX
+		push	ax				   		   ; Reserve AX
 		mov     ax, COLUMNS        		   ; How many columns in AX
 		mul     cx                 		   ; So we now multiply CX (Y coord) by COLUMNS
-		add     bx, ax             		   ; Add it to the pointer
+		mov     cx, ax             		   ; Store the line offset in CX
 		pop     ax				   		   ; Recover AX (X coord)
-		add     bx, ax			   		   ; Add the X coord to BX, now we can read
-		cmp     word [ds:bx], 0009h		   ; There's a mine
-		jne     nomine	
-		mov     bx, minebmp                ; Point to the mine bitmap
+		add     ax, cx					   ; Add the line offset and the X offset 
+		mov     cx, 2
+		mul     cx                         ; Multiply by 2 the offset
+		add     bx, cx			   		   ; Add the X coord to BX, now we can read
+		pop     ax                         ; Recover the values of AX and BX
+		pop     cx
+		cmp     word [ds:bx], 00009h		   ; There's a mine
+		je      mine	
+		cmp     word [ds:bx], 00001h
+		je      putone
+		cmp     word [ds:bx], 00002h
+		je      puttwo
+		cmp     word [ds:bx], 00003h
+		je      putthree
+		cmp     word [ds:bx], 00004h
+		je      putfour
+		cmp     word [ds:bx], 00005h
+		je      putfive
+		cmp     word [ds:bx], 00006h
+		je      putsix
+		cmp     word [ds:bx], 00007h
+		je      putseven
+		cmp     word [ds:bx], 00008h
+		je      puteight
+		mov     bx, covercell                ; Point to the coveredcell bitmap
 		ret
-nomine:	
-		mov     bx, covercell		;  Point to the covered cell
+mine:	
+		mov     bx, minebmp		;  Point to the covered cell
+		ret     
+putone:	
+		mov     bx, numone		;  Point to the covered cell
+		ret     
+puttwo:	
+		mov     bx, numtwo		;  Point to the covered cell
+		ret     
+putthree:	
+		mov     bx, numthree		;  Point to the covered cell
+		ret     
+putfour:	
+		mov     bx, numfour		;  Point to the covered cell
+		ret     
+putfive:	
+		mov     bx, numfive		;  Point to the covered cell
+		ret     
+putsix:	
+		mov     bx, numsix		;  Point to the covered cell
+		ret     
+putseven:	
+		mov     bx, numseven		;  Point to the covered cell
+		ret     
+puteight:	
+		mov     bx, numeight		;  Point to the covered cell
 		ret     
 
 ;Random subroutines here
@@ -165,21 +213,100 @@ peektable:
 		mov     ax, cx
 		mov     cx, COLUMNS
 		mul     cx
-		mov     bx, map
-		add     bx, ax
+		mov     cx, ax
 		pop     ax
+		add     ax, cx
+		mov     cx, 2
+		mul     cx
+		mov     bx, map
 		add     bx, ax
 		mov		dx, word [ds:bx]			;Read     
 peekend:
 		ret
+
+calcnumber:
+		push    ax
+		push    cx
+		call    peekend
+		pop     cx
+		pop     ax
+		cmp     dx, 00009h
+		jne     calcend
+		inc     byte [tempnumber]
+calcend:
+		ret
+
+checksurroundings:
+		mov     byte [tempnumber], 0
+		push    ax
+		push    cx
+		sub     ax, 1
+		sub     cx, 1
+		call    calcnumber
+		add     ax, 1
+		call    calcnumber
+		add     ax, 1
+		call    calcnumber
+		pop     cx
+		pop     ax
+		push    ax
+		push    cx
+		sub     ax, 1
+		call    calcnumber
+		add     ax, 2
+		call    calcnumber
+		pop     cx
+		pop     ax
+		push    ax
+		push    cx
+		add     cx, 1
+		sub     ax, 1
+		call    calcnumber
+		add     ax, 1
+		call    calcnumber
+		add     ax, 1
+		call    calcnumber
+		pop     cx
+		mov     bx, map
+		mov     ax, cx
+		mov     dx, COLUMNS
+		mul     dx
+		mov     dx, ax
+		pop     ax
+		push    ax
+		add     dx, ax
+		mov     ax, dx
+		mov     dx, 2
+		mul     dx
+		add     bx, ax
+		pop     ax
+		mov     dx, 0000h
+		mov     dl, byte [tempnumber]
+		mov     word [ds:bx], dx
+		ret
 		
 ;This routine checks the map and puts numbers down given the 
 ;amount of mines around
-;calculateminenumbers:
-;		mov		bx, map
-;		mov     dx, 00h
-		
-		
+calculateminenumbers:
+		mov     ax, 0
+        mov     cx, 0
+cmnloop:
+		push    ax
+		push    cx
+		call    peektable
+		pop     cx
+		pop     ax
+		cmp     dx, 000009h
+		je      cmncontinue
+		call    checksurroundings
+cmncontinue:
+		inc     ax
+		cmp     ax, COLUMNS
+		jl      cmnloop
+		inc     cx
+		cmp     cx, LINES
+		jl      cmnloop
+		ret
 
 mainloop:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -277,6 +404,7 @@ use16
 lastkeypressed:		db		0
 seed:				dw      0
 minecount:          db      0
+tempnumber:         db      0
 ;Game map. First 8 bytes are for the cell status
 ;the last 8 bytes are for the cell contents.
 ;
