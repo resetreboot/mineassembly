@@ -151,12 +151,35 @@ putmine:
 		inc     byte [minecount]
 		mov     word [ds:bx], 00009h		;Place mine
 		jmp     continuecreateminefield
+
+;This routine returns in DX the value of the cell pointed by CX (Y coord) and
+;AX (X coord)
+;Mangles AX, BX, CX and DX
+peektable:
+		mov     dx, 0						;In case we return prematurely, we return nothing
+		cmp     ax, COLUMNS					;If we are out of bounds, return
+		jge     peekend
+		cmp     cx, LINES
+		jge     peekend
+		push    ax							;Calculate offset
+		mov     ax, cx
+		mov     cx, COLUMNS
+		mul     cx
+		mov     bx, map
+		add     bx, ax
+		pop     ax
+		add     bx, ax
+		mov		dx, word [ds:bx]			;Read     
+peekend:
+		ret
 		
 ;This routine checks the map and puts numbers down given the 
-;amount of 
+;amount of mines around
 ;calculateminenumbers:
-;		mov		bx, [map]
+;		mov		bx, map
 ;		mov     dx, 00h
+		
+		
 
 mainloop:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -296,3 +319,75 @@ flagbmp:			db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh
                     db      0fh, 17h, 17h, 17h, 10h, 17h, 17h, 14h 
                     db      0fh, 17h, 10h, 10h, 10h, 10h, 10h, 14h 
                     db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h 
+
+numone: 			db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h 
+                    db      14h, 17h, 17h, 17h, 01h, 17h, 17h, 0fh 
+                    db      14h, 17h, 17h, 01h, 01h, 17h, 17h, 0fh 
+                    db      14h, 17h, 01h, 17h, 01h, 17h, 17h, 0fh 
+                    db      14h, 17h, 17h, 17h, 01h, 17h, 17h, 0fh 
+                    db      14h, 17h, 17h, 17h, 01h, 17h, 17h, 0fh 
+                    db      14h, 17h, 01h, 01h, 01h, 01h, 01h, 0fh 
+                    db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
+
+numtwo:	     		db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h 
+                    db      14h, 17h, 17h, 02h, 02h, 02h, 17h, 0fh 
+                    db      14h, 17h, 02h, 17h, 17h, 17h, 02h, 0fh 
+                    db      14h, 17h, 17h, 17h, 17h, 17h, 02h, 0fh 
+                    db      14h, 17h, 17h, 02h, 02h, 02h, 17h, 0fh 
+                    db      14h, 17h, 02h, 17h, 17h, 17h, 17h, 0fh 
+                    db      14h, 17h, 02h, 02h, 02h, 02h, 02h, 0fh 
+                    db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
+
+numthree:			db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h 
+                    db      14h, 17h, 17h, 04h, 04h, 04h, 17h, 0fh 
+                    db      14h, 17h, 04h, 17h, 17h, 17h, 04h, 0fh 
+                    db      14h, 17h, 17h, 17h, 17h, 17h, 04h, 0fh 
+                    db      14h, 17h, 17h, 17h, 04h, 04h, 17h, 0fh 
+                    db      14h, 17h, 04h, 17h, 17h, 17h, 04h, 0fh 
+                    db      14h, 17h, 17h, 04h, 04h, 04h, 17h, 0fh 
+                    db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
+
+numfour:			db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h 
+                    db      14h, 17h, 17h, 17h, 05h, 05h, 17h, 0fh 
+                    db      14h, 17h, 17h, 05h, 17h, 05h, 17h, 0fh 
+                    db      14h, 17h, 05h, 17h, 17h, 05h, 17h, 0fh 
+                    db      14h, 17h, 05h, 05h, 05h, 05h, 05h, 0fh 
+                    db      14h, 17h, 17h, 17h, 17h, 05h, 17h, 0fh 
+                    db      14h, 17h, 17h, 17h, 05h, 05h, 05h, 0fh 
+                    db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
+
+numfive:			db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h 
+                    db      14h, 17h, 06h, 06h, 06h, 06h, 06h, 0fh 
+                    db      14h, 17h, 06h, 17h, 17h, 17h, 17h, 0fh 
+                    db      14h, 17h, 06h, 17h, 17h, 17h, 17h, 0fh 
+                    db      14h, 17h, 17h, 06h, 06h, 06h, 17h, 0fh 
+                    db      14h, 17h, 17h, 17h, 17h, 17h, 06h, 0fh 
+                    db      14h, 17h, 06h, 06h, 06h, 06h, 17h, 0fh 
+                    db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
+
+numsix: 			db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h 
+                    db      14h, 17h, 17h, 17h, 2bh, 2bh, 17h, 0fh 
+                    db      14h, 17h, 17h, 2bh, 17h, 17h, 17h, 0fh 
+                    db      14h, 17h, 2bh, 17h, 17h, 17h, 17h, 0fh 
+                    db      14h, 17h, 2bh, 2bh, 2bh, 2bh, 17h, 0fh 
+                    db      14h, 17h, 2bh, 17h, 17h, 17h, 2bh, 0fh 
+                    db      14h, 17h, 17h, 2bh, 2bh, 2bh, 17h, 0fh 
+                    db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
+
+numseven:			db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h 
+                    db      14h, 17h, 35h, 35h, 35h, 35h, 35h, 0fh 
+                    db      14h, 17h, 17h, 17h, 17h, 17h, 35h, 0fh 
+                    db      14h, 17h, 17h, 17h, 17h, 35h, 17h, 0fh 
+                    db      14h, 17h, 17h, 17h, 35h, 17h, 17h, 0fh 
+                    db      14h, 17h, 17h, 17h, 35h, 17h, 17h, 0fh 
+                    db      14h, 17h, 17h, 17h, 35h, 17h, 17h, 0fh 
+                    db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
+
+numeight:			db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h 
+                    db      14h, 17h, 17h, 40h, 40h, 40h, 17h, 0fh 
+                    db      14h, 17h, 40h, 17h, 17h, 17h, 40h, 0fh 
+                    db      14h, 17h, 17h, 40h, 40h, 40h, 17h, 0fh 
+                    db      14h, 17h, 40h, 17h, 17h, 17h, 40h, 0fh 
+                    db      14h, 17h, 40h, 17h, 17h, 17h, 40h, 0fh 
+                    db      14h, 17h, 17h, 40h, 40h, 40h, 17h, 0fh 
+                    db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
