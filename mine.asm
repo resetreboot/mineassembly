@@ -21,16 +21,16 @@ segment MainSeg
 use16
 
 start:
-        mov     al,13h          ;AX=0000 at program start
-        int     10h             ;init mode 13h
-        push    word 0A000h     ;Requires 80186 or higher to PUSH IMMED
-        pop     es              ;ES now points to mode 13h screen segment
-		mov     ax, DataSeg     
-		mov     ds, ax          ;DS now points to our data segment
-		call    createminefield ;Initialize the map with mines
-		call    calculateminenumbers
-		call    drawfield       ;Draw the map
-		jmp     mainloop		;Main event and game loop
+        mov     al,13h                   ;AX=0000 at program start
+        int     10h                      ;init mode 13h
+        push    word 0A000h              ;Requires 80186 or higher to PUSH IMMED
+        pop     es                       ;ES now points to mode 13h screen segment
+		mov     ax, DataSeg              
+		mov     ds, ax                   ;DS now points to our data segment
+		call    createminefield          ;Initialize the map with mines
+		call    calculateminenumbers     ;Populate the numbers
+		call    drawfield                ;Draw the map
+		jmp     mainloop		         ;Main event and game loop
 
 
 ; Draw the field
@@ -57,36 +57,27 @@ drawfieldloop:
 getbmp:
 		push    cx                         ; Store the values before scr$%&ing them
 		push    ax
-		mov     bx, map					   ; Store the base of the map in BX
-		push	ax				   		   ; Reserve AX
-		mov     ax, COLUMNS        		   ; How many columns in AX
-		mul     cx                 		   ; So we now multiply CX (Y coord) by COLUMNS
-		mov     cx, ax             		   ; Store the line offset in CX
-		pop     ax				   		   ; Recover AX (X coord)
-		add     ax, cx					   ; Add the line offset and the X offset 
-		mov     cx, 2
-		mul     cx                         ; Multiply by 2 the offset
-		add     bx, cx			   		   ; Add the X coord to BX, now we can read
+		call    peektable
 		pop     ax                         ; Recover the values of AX and BX
 		pop     cx
-		cmp     word [ds:bx], 00009h		   ; There's a mine
+		cmp     dx, 00009h		           ; There's a mine
 		je      mine	
-		cmp     word [ds:bx], 00001h
-		je      putone
-		cmp     word [ds:bx], 00002h
-		je      puttwo
-		cmp     word [ds:bx], 00003h
-		je      putthree
-		cmp     word [ds:bx], 00004h
-		je      putfour
-		cmp     word [ds:bx], 00005h
-		je      putfive
-		cmp     word [ds:bx], 00006h
-		je      putsix
-		cmp     word [ds:bx], 00007h
-		je      putseven
-		cmp     word [ds:bx], 00008h
+		cmp     dx, 00008h
 		je      puteight
+		cmp     dx, 00007h
+		je      putseven
+		cmp     dx, 00006h
+		je      putsix
+		cmp     dx, 00005h
+		je      putfive
+		cmp     dx, 00004h
+		je      putfour
+		cmp     dx, 00003h
+		je      putthree
+		cmp     dx, 00002h
+		je      puttwo
+		cmp     dx, 00001h
+		je      putone
 		mov     bx, covercell                ; Point to the coveredcell bitmap
 		ret
 mine:	
@@ -180,8 +171,8 @@ cmfloop:
 		call    random          ;This leaves a random num in AX
 		pop     bx              ;Recover our counters
 		pop     dx
-		cmp     al, 0FEh		;Compare if it's greater than 240
-		jg		putmine			;Put a mine here
+		cmp     al, 0FFh		;Compare if it's greater than 240
+		je		putmine			;Put a mine here
 continuecreateminefield:
         add     bx, 02h
 		inc     dx
@@ -227,13 +218,15 @@ peekend:
 calcnumber:
 		push    ax
 		push    cx
-		call    peekend
+		call    peektable
 		pop     cx
-		pop     ax
 		cmp     dx, 00009h
 		jne     calcend
-		inc     byte [tempnumber]
+		mov     al, byte [tempnumber]
+		inc     al
+		mov     byte [tempnumber], al
 calcend:
+		pop     ax
 		ret
 
 checksurroundings:
@@ -280,7 +273,7 @@ checksurroundings:
 		mul     dx
 		add     bx, ax
 		pop     ax
-		mov     dx, 0000h
+		mov     dx, 00000h
 		mov     dl, byte [tempnumber]
 		mov     word [ds:bx], dx
 		ret
@@ -296,13 +289,14 @@ cmnloop:
 		call    peektable
 		pop     cx
 		pop     ax
-		cmp     dx, 000009h
+		cmp     dx, 00009h
 		je      cmncontinue
 		call    checksurroundings
 cmncontinue:
 		inc     ax
 		cmp     ax, COLUMNS
 		jl      cmnloop
+		mov     ax, 0
 		inc     cx
 		cmp     cx, LINES
 		jl      cmnloop
@@ -401,7 +395,7 @@ lalt:
 segment DataSeg
 use16
 
-lastkeypressed:		db		0
+lastkeypressed:		dw		0
 seed:				dw      0
 minecount:          db      0
 tempnumber:         db      0
