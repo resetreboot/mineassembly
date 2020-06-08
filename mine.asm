@@ -66,27 +66,52 @@ getbmp:
 		call    peektable
 		pop     ax                         ; Recover the values of AX and BX
 		pop     cx
-		cmp     dh, 01h                   ; Covered cell
-		je      iscovered
+
+;;;;; Normal reading of the field, covering the cells
+
+		; cmp     dh, 01h                   ; Covered cell
+		; je      iscovered
+		; cmp     dh, 02h                   ; Flagged cell
+		; je      isflagged
+		; cmp     dx, 00009h		           ; There's a mine
+		; je      mine	
+		; cmp     dx, 00008h
+		; je      puteight
+		; cmp     dx, 00007h
+		; je      putseven
+		; cmp     dx, 00006h
+		; je      putsix
+		; cmp     dx, 00005h
+		; je      putfive
+		; cmp     dx, 00004h
+		; je      putfour
+		; cmp     dx, 00003h
+		; je      putthree
+		; cmp     dx, 00002h
+		; je      puttwo
+		; cmp     dx, 00001h
+		; je      putone
+
+;;;;;;;;;;;;;;; Uncomment this to see the field uncovered
 		cmp     dh, 02h                   ; Flagged cell
 		je      isflagged
-		cmp     dx, 00009h		           ; There's a mine
+		cmp     dx, 00109h		           ; There's a mine
 		je      mine	
-		cmp     dx, 00008h
+		cmp     dx, 00108h
 		je      puteight
-		cmp     dx, 00007h
+		cmp     dx, 00107h
 		je      putseven
-		cmp     dx, 00006h
+		cmp     dx, 00106h
 		je      putsix
-		cmp     dx, 00005h
+		cmp     dx, 00105h
 		je      putfive
-		cmp     dx, 00004h
+		cmp     dx, 00104h
 		je      putfour
-		cmp     dx, 00003h
+		cmp     dx, 00103h
 		je      putthree
-		cmp     dx, 00002h
+		cmp     dx, 00102h
 		je      puttwo
-		cmp     dx, 00001h
+		cmp     dx, 00101h
 		je      putone
 		mov     bx, emptycell   ; Point to the emptycell bitmap
 		ret
@@ -171,7 +196,7 @@ dontdraw:
 		je      jumplinedraw    ;Time to increment SI in a more complex way
 		inc     si
 continuecomp:
-		cmp     cx, 040h        ;Compare CX to hex 64 (8x8)
+		cmp     cx, COLUMNS * LINES        ;Compare CX to hex 64 (8x8)
 		jne     drawloop        ;Continue
 		ret                     ;Return
 jumplinedraw:
@@ -252,32 +277,51 @@ checksurroundings:
 		mov     byte [tempnumber], 0
 		push    ax
 		push    cx
+		test    ax, ax
+		jz      axiszerofirstrow
 		sub     ax, 1
 		sub     cx, 1
 		call    calcnumber
 		add     ax, 1
+axiszerofirstrow:
 		call    calcnumber
 		add     ax, 1
+		cmp     ax, COLUMNS
+		je      axoutboundsfirstrow
 		call    calcnumber
+axoutboundsfirstrow:
 		pop     cx
 		pop     ax
 		push    ax
 		push    cx
+		test    ax, ax
+		jz      axiszerosecondrow
 		sub     ax, 1
 		call    calcnumber
-		add     ax, 2
+		inc     ax
+axiszerosecondrow:
+		inc     ax
+		cmp     ax, COLUMNS
+		je      axoutboundssecondrow
 		call    calcnumber
+axoutboundssecondrow:
 		pop     cx
 		pop     ax
 		push    ax
 		push    cx
 		add     cx, 1
+		test    ax, ax
+		jz      axiszerothirdrow
 		sub     ax, 1
 		call    calcnumber
+axiszerothirdrow:
 		add     ax, 1
 		call    calcnumber
 		add     ax, 1
+		cmp     ax, COLUMNS
+		je      axoutboundsthirdrow
 		call    calcnumber
+axoutboundsthirdrow:
 		pop     cx
 		mov     bx, map
 		mov     ax, cx
@@ -494,7 +538,9 @@ youwinstr:          db      "You win!$"
 ;
 ;Cell status: 0 covered, 1 uncovered, 2 flagged
 ;Cell content: 0 empty, 1-8 number, 9 mine
+paddmapbf:			dw      COLUMNS dup 00h
 map:				dw		COLUMNS * LINES dup 00h
+paddmapaft:			dw      COLUMNS dup 00h
 
 covercell:			db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
                     db      0fh, 17h, 17h, 17h, 17h, 17h, 17h, 14h 
