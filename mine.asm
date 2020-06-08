@@ -53,6 +53,12 @@ drawfieldloop:
 		inc     ax
 		cmp     ax, LINES
 		jne     drawfieldloop
+		mov     ax, [cursorx]
+		add     ax, FIELDX
+		mov     cx, [cursory]
+		add     cx, FIELDY          ; Make sure we get the cursor displaced correctly
+		mov     bx, cursorbmp
+		call    drawbox
 		ret    
 getbmp:
 		push    cx                         ; Store the values before scr$%&ing them
@@ -153,7 +159,10 @@ drawbox:
 		mov     dx, 00
 drawloop:
 		mov     al, byte [ds:bx]		;Current address in BX
+		cmp     al, 0ffh				;This is transparent pixel, don't draw
+		je      dontdraw
 		mov     byte [es:si], al        ;Put the pixel into RAM
+dontdraw:
 		inc     bx
 		inc     cx
 		inc     dx
@@ -318,21 +327,22 @@ mainloop:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 		
+		
 		;Check for user input or wanting to leave by pressing ESC
         in      al,60h						;read whatever is at keyboard port; looking for ESC which is #1
-		; cmp     al,48h
-		; je      upkey
-		; cmp     al,4bh
-		; je      leftkey
-        ; cmp     al,4dh
-        ; je      rightkey
-        ; cmp     al,50h
-        ; je      downkey
-		; cmp     al,39h			
-		; je      space
-        ; cmp     al,38h
-        ; je      lalt
-		; mov     word [lastkeypressed], 0h	;Reset the current key as it is not one we are checking
+		cmp     al,48h
+		je      upkey
+		cmp     al,4bh
+		je      leftkey
+        cmp     al,4dh
+        je      rightkey
+        cmp     al,50h
+        je      downkey
+		cmp     al,39h			
+		je      space
+        cmp     al,38h
+        je      lalt
+		mov     word [lastkeypressed], 0h	;Reset the current key as it is not one we are checking
         dec     al							;if ESC, AL now 0
         jnz     mainloop					;fall through if 0, jump otherwise
 		
@@ -343,50 +353,64 @@ exit:
 		mov     al,00					;Exit code as 0, everything went well
 		int     21h
 
-upkey:
-		cmp     ax, [lastkeypressed]
-		je      mainloop
-		mov     [lastkeypressed], ax
-        mov     ah,02
-        mov     dl,31h
-        int     21h
-        jmp     mainloop
+redraw:
+		call    drawfield
+		jmp     mainloop
 
 leftkey:
 		cmp     ax, [lastkeypressed]
 		je      mainloop
 		mov     [lastkeypressed], ax
-        mov     ah,02
-        mov     dl,32h
-        int     21h
-        jmp     mainloop
+		mov     ax, [cursorx]
+		dec     ax
+
+updatelateralmovement:
+		cmp     ax, COLUMNS - 1
+		jg      redraw
+		cmp     ax, 0
+		jl      redraw
+		mov     [cursorx], ax
+        jmp     redraw
 
 rightkey:
 		cmp     ax, [lastkeypressed]
 		je      mainloop
 		mov     [lastkeypressed], ax
-        mov     ah,02
-        mov     dl,33h
-        int     21h
-        jmp     mainloop
+		mov     ax, [cursorx]
+		inc     ax
+        jmp     updatelateralmovement
+
+upkey:
+		cmp     ax, [lastkeypressed]
+		je      mainloop
+		mov     [lastkeypressed], ax
+		mov     cx, [cursory]
+		dec     cx
+
+updateverticalmovement:
+		cmp     cx, LINES - 1
+		jg      redraw
+		cmp     cx, 0
+		jl      redraw
+		mov     [cursory], cx
+        jmp     redraw
 
 downkey:
 		cmp     ax, [lastkeypressed]
 		je      mainloop
 		mov     [lastkeypressed], ax
-        mov     ah,02
-        mov     dl,34h
-        int     21h
-        jmp     mainloop
+		mov     cx, [cursory]
+		inc     cx
+		jmp     updateverticalmovement
 
 space:
 		cmp     ax, [lastkeypressed]
 		je      mainloop
 		mov     [lastkeypressed], ax
-        mov     ah,02
-        mov     dl,39h
-        int     21h
-        jmp     mainloop
+		mov     ax, [cursorx]
+        mov     cx, [cursory]
+		call    uncover
+        jmp     redraw
 
 lalt:
 		cmp     ax, [lastkeypressed]
@@ -396,6 +420,32 @@ lalt:
         mov     dl,38h
         int     21h
         jmp     mainloop
+
+uncover:
+		cmp     ax, COLUMNS					;If we are out of bounds, return
+		jl      checky
+		ret
+checky:
+		cmp     cx, LINES
+		jl      uncoverinbounds
+		ret
+uncoverinbounds:
+		push    ax							;Calculate offset
+		mov     ax, cx
+		mov     cx, COLUMNS
+		mul     cx
+		mov     cx, ax
+		pop     ax
+		add     ax, cx
+		mov     cx, 2
+		mul     cx
+		mov     bx, map
+		add     bx, ax
+		mov		dx, word [ds:bx]			;Read     
+		mov     dh, 00h						;Set upperbit as 0
+		mov     word [ds:bx], dx
+		ret
+		
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;Data segment
@@ -408,6 +458,8 @@ lastkeypressed:		dw		0
 seed:				dw      0
 minecount:          db      0
 tempnumber:         db      0
+cursorx:			dw      0
+cursory:			dw      0
 ;Game map. First 8 bytes are for the cell status
 ;the last 8 bytes are for the cell contents.
 ;
@@ -522,3 +574,12 @@ numeight:			db      14h, 14h, 14h, 14h, 14h, 14h, 14h, 14h
                     db      14h, 17h, 40h, 17h, 17h, 17h, 40h, 0fh 
                     db      14h, 17h, 17h, 40h, 40h, 40h, 17h, 0fh 
                     db      0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh, 0fh 
+
+cursorbmp:			db      2ah, 2ah, 2ah, 2ah, 2ah, 2ah, 2ah, 2ah 
+                    db      2ah, 0ffh, 0ffh, 0ffh, 0ffh, 0ffh, 0ffh, 2ah 
+                    db      2ah, 0ffh, 0ffh, 0ffh, 0ffh, 0ffh, 0ffh, 2ah 
+                    db      2ah, 0ffh, 0ffh, 0ffh, 0ffh, 0ffh, 0ffh, 2ah 
+                    db      2ah, 0ffh, 0ffh, 0ffh, 0ffh, 0ffh, 0ffh, 2ah 
+                    db      2ah, 0ffh, 0ffh, 0ffh, 0ffh, 0ffh, 0ffh, 2ah 
+                    db      2ah, 0ffh, 0ffh, 0ffh, 0ffh, 0ffh, 0ffh, 2ah 
+                    db      2ah, 2ah, 2ah, 2ah, 2ah, 2ah, 2ah, 2ah 
