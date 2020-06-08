@@ -151,7 +151,7 @@ drawbox:
 		mul     dx
 		mov     cx, ax          ;Retrieve the line into CX
         pop     ax              ;Retrieve the X value into AX register
-		mov     dx, 08h
+		mov     dx, COLUMNS
 		mul     dx          	;We multiply the X value too for the 8x8
 		add     cx, ax          ;Now we've put in AX the pointer value 
 		mov     si, cx          ;Set SI to the correct address we'll draw
@@ -354,6 +354,17 @@ exit:
 		mov     al,00					;Exit code as 0, everything went well
 		int     21h
 
+gameover:
+		mov     ah, 0
+        mov     al,03           		;AX=0000 due to mainloop exit condition
+        int     10h             		;Switch back to text mode as a convenience
+		mov     dx, gameoverstr
+		mov     ah, 09h
+		int     21h
+		mov     ah,4Ch					;Function to exit, now we are an EXE, do it correctly
+		mov     al,00					;Exit code as 0, everything went well
+		int     21h
+
 redraw:
 		call    drawfield
 		jmp     mainloop
@@ -411,6 +422,11 @@ space:
 		mov     ax, [cursorx]
         mov     cx, [cursory]
 		call    uncover
+		mov     ax, [cursorx]
+		mov     cx, [cursory]
+		call    peektable
+		cmp     dx, 00009h
+		je      gameover
         jmp     redraw
 
 lalt:
@@ -471,6 +487,8 @@ minecount:          db      0
 tempnumber:         db      0
 cursorx:			dw      0
 cursory:			dw      0
+gameoverstr:		db      "Game over!$"
+youwinstr:          db      "You win!$"
 ;Game map. First 8 bytes are for the cell status
 ;the last 8 bytes are for the cell contents.
 ;
