@@ -60,6 +60,10 @@ getbmp:
 		call    peektable
 		pop     ax                         ; Recover the values of AX and BX
 		pop     cx
+		cmp     dh, 01h                   ; Covered cell
+		je      iscovered
+		cmp     dh, 02h                   ; Flagged cell
+		je      isflagged
 		cmp     dx, 00009h		           ; There's a mine
 		je      mine	
 		cmp     dx, 00008h
@@ -78,34 +82,39 @@ getbmp:
 		je      puttwo
 		cmp     dx, 00001h
 		je      putone
-		mov     bx, covercell                ; Point to the coveredcell bitmap
+		mov     bx, emptycell   ; Point to the emptycell bitmap
 		ret
+iscovered:	
+		mov     bx, covercell	;  Point to the covered cell
+		ret     
+isflagged:
+		mov     bx, flagbmp     ; Point to the flag bitmap
 mine:	
-		mov     bx, minebmp		;  Point to the covered cell
+		mov     bx, minebmp		;  Point to the mine cell
 		ret     
 putone:	
-		mov     bx, numone		;  Point to the covered cell
+		mov     bx, numone		;  Point to the corresponding number cell
 		ret     
 puttwo:	
-		mov     bx, numtwo		;  Point to the covered cell
+		mov     bx, numtwo		;  Point to the corresponding number cell
 		ret     
 putthree:	
-		mov     bx, numthree		;  Point to the covered cell
+		mov     bx, numthree		;  Point to the corresponding number cell
 		ret     
 putfour:	
-		mov     bx, numfour		;  Point to the covered cell
+		mov     bx, numfour		;  Point to the corresponding number cell
 		ret     
 putfive:	
-		mov     bx, numfive		;  Point to the covered cell
+		mov     bx, numfive		;  Point to the corresponding number cell
 		ret     
 putsix:	
-		mov     bx, numsix		;  Point to the covered cell
+		mov     bx, numsix		;  Point to the corresponding number cell
 		ret     
 putseven:	
-		mov     bx, numseven		;  Point to the covered cell
+		mov     bx, numseven		;  Point to the corresponding number cell
 		ret     
 puteight:	
-		mov     bx, numeight		;  Point to the covered cell
+		mov     bx, numeight		;  Point to the corresponding number cell
 		ret     
 
 ;Random subroutines here
@@ -185,10 +194,10 @@ finishcreateminefield:
 putmine:
 		cmp     byte [minecount], 10
 		jge     finishcreateminefield
-		cmp     word [ds:bx], 00009h		;Check memory for placed mine 
+		cmp     word [ds:bx], 00109h		;Check memory for placed mine 
 		je      continuecreateminefield
 		inc     byte [minecount]
-		mov     word [ds:bx], 00009h		;Place mine
+		mov     word [ds:bx], 00109h		;Place mine
 		jmp     continuecreateminefield
 
 ;This routine returns in DX the value of the cell pointed by CX (Y coord) and
@@ -220,7 +229,7 @@ calcnumber:
 		push    cx
 		call    peektable
 		pop     cx
-		cmp     dx, 00009h
+		cmp     dx, 00109h
 		jne     calcend
 		mov     al, byte [tempnumber]
 		inc     al
@@ -273,7 +282,7 @@ checksurroundings:
 		mul     dx
 		add     bx, ax
 		pop     ax
-		mov     dx, 00000h
+		mov     dx, 00100h
 		mov     dl, byte [tempnumber]
 		mov     word [ds:bx], dx
 		ret
@@ -289,7 +298,7 @@ cmnloop:
 		call    peektable
 		pop     cx
 		pop     ax
-		cmp     dx, 00009h
+		cmp     dx, 00109h
 		je      cmncontinue
 		call    checksurroundings
 cmncontinue:
