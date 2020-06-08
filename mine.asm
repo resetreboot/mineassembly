@@ -95,6 +95,7 @@ iscovered:
 		ret     
 isflagged:
 		mov     bx, flagbmp     ; Point to the flag bitmap
+		ret
 mine:	
 		mov     bx, minebmp		;  Point to the mine cell
 		ret     
@@ -416,20 +417,20 @@ lalt:
 		cmp     ax, [lastkeypressed]
 		je      mainloop
 		mov     [lastkeypressed], ax
-        mov     ah,02
-        mov     dl,38h
-        int     21h
-        jmp     mainloop
+		mov     ax, [cursorx]
+        mov     cx, [cursory]
+		call    setflag
+        jmp     redraw
 
-uncover:
+getoffset:
 		cmp     ax, COLUMNS					;If we are out of bounds, return
 		jl      checky
 		ret
 checky:
 		cmp     cx, LINES
-		jl      uncoverinbounds
+		jl      inbounds
 		ret
-uncoverinbounds:
+inbounds:
 		push    ax							;Calculate offset
 		mov     ax, cx
 		mov     cx, COLUMNS
@@ -441,11 +442,21 @@ uncoverinbounds:
 		mul     cx
 		mov     bx, map
 		add     bx, ax
+		ret
+
+uncover:
+		call    getoffset
 		mov		dx, word [ds:bx]			;Read     
 		mov     dh, 00h						;Set upperbit as 0
 		mov     word [ds:bx], dx
 		ret
 		
+setflag:
+		call    getoffset
+		mov		dx, word [ds:bx]			;Read     
+		mov     dh, 02h						;Set upperbit as 0
+		mov     word [ds:bx], dx
+		ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;Data segment
