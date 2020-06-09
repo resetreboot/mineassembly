@@ -404,6 +404,7 @@ exit:
 		int     21h
 
 gameover:
+		call    drawfield
 		mov     ax, 0
 		mov     ah, 02Ch                ;Get current system time
 		int     021h
