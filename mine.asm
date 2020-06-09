@@ -60,6 +60,7 @@ drawfieldloop:
 		add     cx, FIELDY          ; Make sure we get the cursor displaced correctly
 		mov     bx, cursorbmp
 		call    drawbox
+		call    drawmineno
 		ret    
 getbmp:
 		push    cx                         ; Store the values before scr$%&ing them
@@ -150,6 +151,49 @@ putseven:
 puteight:	
 		mov     bx, numeight		;  Point to the corresponding number cell
 		ret     
+
+drawmineno:
+		mov     ax, 0200h           ; Set cursor routine selection
+		mov     bh, 00h             ; Set to 0 for graphics modes
+		mov     dx, 0013h           ; Top row, centered (double digits)
+		int     10h
+		mov     ax, [minecount]     ; Get mines
+		cmp     ax, 10              ; See if we have to draw a zero or not
+		jge     drawdecimal         
+		push    ax
+		mov     cx, 00h             ; Tell the system to draw a zero
+		call    drawnumber
+		pop     cx
+		jmp     drawunits
+drawdecimal:
+		mov     ax, [minecount]
+		mov     cx, 10
+		div     cl
+		push    ax
+		mov     cl, al
+		call    drawnumber
+		pop     ax
+		mov     al, 00
+		mov     cl, ah
+drawunits:
+		push    cx
+		mov     ax, 0200h           ; Set cursor routine selection
+		mov     bh, 00h             ; Set to 0 for graphics modes
+		mov     dx, 0014h           ; Top row, centered (double digits)
+		int     10h
+		pop     cx
+		call    drawnumber
+		ret
+
+drawnumber:
+		mov     al, cl
+		add     ax, 30h             ; We draw numbers, add 30h and you get the ascii code
+		mov     ah, 09h             ; Draw a character at current cursor position
+		mov     cx, 01h             ; Draw the character once
+		mov     bh, 00h             ; Black background
+		mov     bl, 04h             ; Red color 
+		int     10h
+		ret
 
 ;Random subroutines here
 initseed:
@@ -527,6 +571,7 @@ uncover:
 		mov		dx, word [ds:bx]			;Read     
 		cmp     dh, 00h                     ;Already uncovered
 		je      terminateuncover
+		dec     word [covered]
 		mov     dh, 00h						;Set upperbit as 0
 		mov     word [ds:bx], dx
 		cmp     dx, 00000h					;If the cell is empty
@@ -587,6 +632,7 @@ unaxoutboundsthirdrow:
 		ret
 		
 setflag:
+		dec     byte [minecount]
 		call    getoffset
 		mov		dx, word [ds:bx]			;Read     
 		mov     dh, 02h						;Set upperbit as 0
@@ -606,6 +652,7 @@ minecount:          db      0
 tempnumber:         db      0
 cursorx:			dw      0
 cursory:			dw      0
+covered:          dw      COLUMNS * LINES
 gameoverstr:		db      "Game over!$"
 youwinstr:          db      "You win!$"
 ;Game map. First 8 bytes are for the cell status
