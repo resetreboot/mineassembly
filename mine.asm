@@ -8,8 +8,8 @@ stack  $3000
 ;Constants
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-COLUMNS = 8
-LINES   = 8
+COLUMNS = 16
+LINES   = 16
 FIELDX  = 16
 FIELDY  = 2
 MAXMINES = 10
@@ -198,7 +198,7 @@ dontdraw:
 		je      jumplinedraw    ;Time to increment SI in a more complex way
 		inc     si
 continuecomp:
-		cmp     cx, COLUMNS * LINES        ;Compare CX the max the field will be
+		cmp     cx, 64        ;Compare CX the max the field will be
 		jne     drawloop        ;Continue
 		ret                     ;Return
 jumplinedraw:
