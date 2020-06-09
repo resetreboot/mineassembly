@@ -10,9 +10,9 @@ stack  $3000
 
 COLUMNS = 16
 LINES   = 16
-FIELDX  = 16
-FIELDY  = 2
-MAXMINES = 10
+FIELDX  = 20 - (COLUMNS/2)
+FIELDY  = 4
+MAXMINES = 40
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;Code
@@ -376,8 +376,6 @@ mainloop:
 ;Write 8-bit values to A000:0000 to draw some pixels.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-		
-		
 		;Check for user input or wanting to leave by pressing ESC
         in      al,60h						;read whatever is at keyboard port; looking for ESC which is #1
 		cmp     al,48h
