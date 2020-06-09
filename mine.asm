@@ -519,10 +519,71 @@ inbounds:
 		ret
 
 uncover:
+		push    ax                          ;Save coordinates
+		push    cx
 		call    getoffset
+		pop     cx                          ;Recover them
+		pop     ax
 		mov		dx, word [ds:bx]			;Read     
+		cmp     dh, 00h                     ;Already uncovered
+		je      terminateuncover
 		mov     dh, 00h						;Set upperbit as 0
 		mov     word [ds:bx], dx
+		cmp     dx, 00000h					;If the cell is empty
+		je      uncoveraround
+terminateuncover:
+		ret
+
+uncoveraround:
+		push    ax
+		push    cx
+		sub     cx, 1
+		test    ax, ax
+		jz      unaxiszerofirstrow
+		sub     ax, 1
+		call    uncover
+		add     ax, 1
+unaxiszerofirstrow:
+		call    uncover
+		add     ax, 1
+		cmp     ax, COLUMNS
+		je      unaxoutboundsfirstrow
+		call    uncover
+unaxoutboundsfirstrow:
+		pop     cx
+		pop     ax
+		push    ax
+		push    cx
+		test    ax, ax
+		jz      unaxiszerosecondrow
+		sub     ax, 1
+		call    uncover
+		inc     ax
+unaxiszerosecondrow:
+		inc     ax
+		cmp     ax, COLUMNS
+		je      unaxoutboundssecondrow
+		call    uncover
+unaxoutboundssecondrow:
+		pop     cx
+		pop     ax
+		push    ax
+		push    cx
+		add     cx, 1
+		test    ax, ax
+		jz      unaxiszerothirdrow
+		sub     ax, 1
+		call    uncover
+		add     ax, 1
+unaxiszerothirdrow:
+		call    uncover
+		add     ax, 1
+		cmp     ax, COLUMNS
+		je      unaxoutboundsthirdrow
+		call    uncover
+unaxoutboundsthirdrow:
+		pop     cx
+		pop     ax
 		ret
 		
 setflag:
