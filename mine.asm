@@ -273,14 +273,17 @@ calcend:
 		pop     ax
 		ret
 
+; We don't check Y bounds as we have surrounded the field array
+; with padding zeroes, rendering this calculation correct if CX
+; is below or beyond the limits
 checksurroundings:
 		mov     byte [tempnumber], 0
 		push    ax
 		push    cx
+		sub     cx, 1
 		test    ax, ax
 		jz      axiszerofirstrow
 		sub     ax, 1
-		sub     cx, 1
 		call    calcnumber
 		add     ax, 1
 axiszerofirstrow:
@@ -314,8 +317,8 @@ axoutboundssecondrow:
 		jz      axiszerothirdrow
 		sub     ax, 1
 		call    calcnumber
-axiszerothirdrow:
 		add     ax, 1
+axiszerothirdrow:
 		call    calcnumber
 		add     ax, 1
 		cmp     ax, COLUMNS
