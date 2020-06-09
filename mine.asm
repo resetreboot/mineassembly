@@ -12,6 +12,7 @@ COLUMNS = 8
 LINES   = 8
 FIELDX  = 16
 FIELDY  = 4
+MAXMINES = 10
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;Code
@@ -69,50 +70,51 @@ getbmp:
 
 ;;;;; Normal reading of the field, covering the cells
 
-		; cmp     dh, 01h                   ; Covered cell
-		; je      iscovered
-		; cmp     dh, 02h                   ; Flagged cell
-		; je      isflagged
-		; cmp     dx, 00009h		           ; There's a mine
-		; je      mine	
-		; cmp     dx, 00008h
-		; je      puteight
-		; cmp     dx, 00007h
-		; je      putseven
-		; cmp     dx, 00006h
-		; je      putsix
-		; cmp     dx, 00005h
-		; je      putfive
-		; cmp     dx, 00004h
-		; je      putfour
-		; cmp     dx, 00003h
-		; je      putthree
-		; cmp     dx, 00002h
-		; je      puttwo
-		; cmp     dx, 00001h
-		; je      putone
-
-;;;;;;;;;;;;;;; Uncomment this to see the field uncovered
+		cmp     dh, 01h                   ; Covered cell
+		je      iscovered
 		cmp     dh, 02h                   ; Flagged cell
 		je      isflagged
-		cmp     dx, 00109h		           ; There's a mine
+		cmp     dx, 00009h		           ; There's a mine
 		je      mine	
-		cmp     dx, 00108h
+		cmp     dx, 00008h
 		je      puteight
-		cmp     dx, 00107h
+		cmp     dx, 00007h
 		je      putseven
-		cmp     dx, 00106h
+		cmp     dx, 00006h
 		je      putsix
-		cmp     dx, 00105h
+		cmp     dx, 00005h
 		je      putfive
-		cmp     dx, 00104h
+		cmp     dx, 00004h
 		je      putfour
-		cmp     dx, 00103h
+		cmp     dx, 00003h
 		je      putthree
-		cmp     dx, 00102h
+		cmp     dx, 00002h
 		je      puttwo
-		cmp     dx, 00101h
+		cmp     dx, 00001h
 		je      putone
+
+;;;;;;;;;;;;;;; Uncomment this to see the field uncovered
+		; cmp     dh, 02h                   ; Flagged cell
+		; je      isflagged
+		; cmp     dx, 00109h		           ; There's a mine
+		; je      mine	
+		; cmp     dx, 00108h
+		; je      puteight
+		; cmp     dx, 00107h
+		; je      putseven
+		; cmp     dx, 00106h
+		; je      putsix
+		; cmp     dx, 00105h
+		; je      putfive
+		; cmp     dx, 00104h
+		; je      putfour
+		; cmp     dx, 00103h
+		; je      putthree
+		; cmp     dx, 00102h
+		; je      puttwo
+		; cmp     dx, 00101h
+		; je      putone
+
 		mov     bx, emptycell   ; Point to the emptycell bitmap
 		ret
 iscovered:	
@@ -222,12 +224,12 @@ continuecreateminefield:
 		inc     dx
 		cmp     dx, COLUMNS * LINES  ; Check we have done the whole map
 		jl      cmfloop
-		cmp     byte [minecount], 10	; Check we've put all mines!
+		cmp     byte [minecount], MAXMINES	; Check we've put all mines!
 		jl      createminefield
 finishcreateminefield:
 		ret								; All is ok
 putmine:
-		cmp     byte [minecount], 10
+		cmp     byte [minecount], MAXMINES
 		jge     finishcreateminefield
 		cmp     word [ds:bx], 00109h		;Check memory for placed mine 
 		je      continuecreateminefield
@@ -402,6 +404,16 @@ exit:
 		int     21h
 
 gameover:
+		mov     ax, 0
+		mov     ah, 02Ch                ;Get current system time
+		int     021h
+		mov     bh, dh                  ;Get current seconds
+waitloop:
+		mov     ah, 02Ch
+		int     021h
+		sub     dh, bh                  ;Get seconds elapsed
+		cmp     dh, 2
+		jl      waitloop
 		mov     ah, 0
         mov     al,03           		;AX=0000 due to mainloop exit condition
         int     10h             		;Switch back to text mode as a convenience
