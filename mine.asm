@@ -435,15 +435,28 @@ mainloop:
         cmp     al,38h
         je      lalt
 		mov     word [lastkeypressed], 0h	;Reset the current key as it is not one we are checking
+		cmp     byte [wingame], 1
+		je      winexit
         dec     al							;if ESC, AL now 0
         jnz     mainloop					;fall through if 0, jump otherwise
 		
 exit:
-        mov     al,03           		;AX=0000 due to mainloop exit condition
+        mov     ax,03           		;AX=0000 due to mainloop exit condition
         int     10h             		;Switch back to text mode as a convenience
 		mov     ah,4Ch					;Function to exit, now we are an EXE, do it correctly
 		mov     al,00					;Exit code as 0, everything went well
 		int     21h
+
+winexit:
+        mov     al,03           		;AX=0000 due to mainloop exit condition
+        int     10h             		;Switch back to text mode as a convenience
+		mov     dx, youwinstr
+		mov     ah, 09h
+		int     21h
+		mov     ah,4Ch					;Function to exit, now we are an EXE, do it correctly
+		mov     al,00					;Exit code as 0, everything went well
+		int     21h
+		
 
 gameover:
 		call    drawfield
@@ -637,6 +650,18 @@ setflag:
 		mov		dx, word [ds:bx]			;Read     
 		mov     dh, 02h						;Set upperbit as 0
 		mov     word [ds:bx], dx
+		call    checkendgame
+		ret
+
+checkendgame:
+		mov     al, byte [minecount]
+		test    al, al
+		jnz     endcheckendgame
+		mov     ax, word [covered]
+		sub     ax, MAXMINES
+		jnz     endcheckendgame
+		mov     byte [wingame], 1
+endcheckendgame:
 		ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -652,7 +677,8 @@ minecount:          db      0
 tempnumber:         db      0
 cursorx:			dw      0
 cursory:			dw      0
-covered:          dw      COLUMNS * LINES
+covered:            dw      COLUMNS * LINES
+wingame:            db      0
 gameoverstr:		db      "Game over!$"
 youwinstr:          db      "You win!$"
 ;Game map. First 8 bytes are for the cell status
