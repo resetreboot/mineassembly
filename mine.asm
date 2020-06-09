@@ -11,7 +11,7 @@ stack  $3000
 COLUMNS = 8
 LINES   = 8
 FIELDX  = 16
-FIELDY  = 4
+FIELDY  = 2
 MAXMINES = 10
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -48,11 +48,11 @@ drawfieldloop:
 		pop     ax
 		pop     cx
 		inc     cx
-		cmp     cx, COLUMNS
+		cmp     cx, LINES
 		jne     drawfieldloop
 		mov     cx, 0h
 		inc     ax
-		cmp     ax, LINES
+		cmp     ax, COLUMNS
 		jne     drawfieldloop
 		mov     ax, [cursorx]
 		add     ax, FIELDX
@@ -174,11 +174,11 @@ random:
 drawbox:
 		push    ax              ;Save the X value for later
 		mov     ax, cx          ;Prepare for multiplications
-		mov     dx, 0A00h
+		mov     dx, 320 * 8     ;The box is 8x8, the screen width is 320
 		mul     dx
 		mov     cx, ax          ;Retrieve the line into CX
         pop     ax              ;Retrieve the X value into AX register
-		mov     dx, COLUMNS
+		mov     dx, 8			;The box is 8x8, each box is 8 pixel wide
 		mul     dx          	;We multiply the X value too for the 8x8
 		add     cx, ax          ;Now we've put in AX the pointer value 
 		mov     si, cx          ;Set SI to the correct address we'll draw
@@ -194,11 +194,11 @@ dontdraw:
 		inc     bx
 		inc     cx
 		inc     dx
-		cmp     dx, 08h           ;Sort of modulo
+		cmp     dx, 8           ;Sort of modulo
 		je      jumplinedraw    ;Time to increment SI in a more complex way
 		inc     si
 continuecomp:
-		cmp     cx, COLUMNS * LINES        ;Compare CX to hex 64 (8x8)
+		cmp     cx, COLUMNS * LINES        ;Compare CX the max the field will be
 		jne     drawloop        ;Continue
 		ret                     ;Return
 jumplinedraw:
