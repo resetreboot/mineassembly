@@ -157,7 +157,8 @@ drawmineno:
 		mov     bh, 00h             ; Set to 0 for graphics modes
 		mov     dx, 0013h           ; Top row, centered (double digits)
 		int     10h
-		mov     ax, [minecount]     ; Get mines
+		mov     ax, 0
+		mov     al, [minecount]     ; Get mines
 		cmp     ax, 10              ; See if we have to draw a zero or not
 		jge     drawdecimal         
 		push    ax
@@ -166,7 +167,8 @@ drawmineno:
 		pop     cx
 		jmp     drawunits
 drawdecimal:
-		mov     ax, [minecount]
+		mov     ax, 0
+		mov     al, byte [minecount]
 		mov     cx, 10
 		div     cl
 		push    ax
