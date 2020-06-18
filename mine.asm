@@ -3,7 +3,6 @@ entry MainSeg:start
 org    0100h
 stack  $3000
 
-;org 100h                        ;specify origin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;Constants
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -417,11 +416,6 @@ cmncontinue:
 		ret
 
 mainloop:
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;This is where you do your mega-amazing tiny program.
-;Write 8-bit values to A000:0000 to draw some pixels.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 		;Check for user input or wanting to leave by pressing ESC
         in      al,60h						;read whatever is at keyboard port; looking for ESC which is #1
 		cmp     al,48h
